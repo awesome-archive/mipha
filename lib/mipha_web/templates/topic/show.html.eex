@@ -1,3 +1,4 @@
+<script>window.channelTopicId = "<%= @topic.id %>"</script>
 <div class="row">
   <div class="col-md-9">
     <div class="topic-detail card">
@@ -14,14 +15,14 @@
             <%= time_tag(@topic.inserted_at) %>
             <%= if @topic.reply_count != 0 do %>
               <span class="hidden-mobile">
-                · 最后由
+                • <%= gettext "Last by" %>
                 <%= link @topic.last_reply_user.username, to: user_path(@conn, :show, @topic.last_reply_user.username), class: "user-name" %>
-                回复于
+                <%= gettext "replied at" %> <%= time_tag(@topic.updated_at) %>
                 <%= time_tag(@topic.updated_at) %>
               </span>
             <% end %>
             ·
-            <%= @topic.visit_count %> 次阅读
+            <%= @topic.visit_count %> <%= gettext "hits" %>
           </div>
         </div>
         <div class="avatar media-right">

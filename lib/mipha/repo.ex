@@ -1,6 +1,5 @@
 defmodule Mipha.Repo do
-  use Ecto.Repo, otp_app: :mipha
-  use Scrivener, page_size: 20
+  use Ecto.Repo, otp_app: :mipha, adapter: Ecto.Adapters.Postgres
 
   @doc """
   Dynamically loads the repository url from the

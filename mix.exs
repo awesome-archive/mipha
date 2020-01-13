@@ -5,12 +5,19 @@ defmodule Mipha.Mixfile do
     [
       app: :mipha,
       version: "0.0.1",
-      elixir: "~> 1.4",
-      elixirc_paths: elixirc_paths(Mix.env),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers,
-      start_permanent: Mix.env == :prod,
+      elixir: "~> 1.6",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -26,45 +33,49 @@ defmodule Mipha.Mixfile do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_),     do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.3.3"},
-      {:phoenix_pubsub, "~> 1.0"},
-      {:phoenix_ecto, "~> 3.2"},
+      {:phoenix, "~> 1.4.6"},
+      {:phoenix_pubsub, "~> 1.1"},
+      {:phoenix_ecto, "~> 4.0"},
+      {:ecto_sql, "~> 3.0"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 2.10"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:gettext, "~> 0.11"},
-      {:cowboy, "~> 1.0"},
-      {:credo, "~> 0.9.3"},
+      {:plug_cowboy, "~> 2.0"},
+      {:plug, "~> 1.7"},
+      {:credo, "~> 0.10.2", only: [:dev, :test], runtime: false},
       {:comeonin, "~> 4.1"},
       {:bcrypt_elixir, "~> 1.0"},
       {:ueberauth, "~> 0.5.0"},
       {:ueberauth_identity, "~> 0.2.3"},
       {:ueberauth_github, "~> 0.7.0"},
       {:faker, "~> 0.10.0"},
-      {:earmark, "~> 1.2"},
+      {:earmark, "~> 1.3.0"},
       {:html_sanitize_ex, "~> 1.3"},
       {:timex, "~> 3.3"},
-      {:scrivener_ecto, "~> 1.3"},
-      {:scrivener_html, "~> 1.7"},
+      {:ecto_enum, "~> 1.1"},
       {:qiniu, "~> 0.4.0"},
       {:exmoji, "~> 0.2.2"},
       {:bamboo, "~> 1.0"},
       {:bamboo_smtp, "~> 1.5"},
-      {:ecto_enum, "~> 1.1"},
-      {:cachex, "~> 3.0"},
+      {:cachex, "~> 3.1.1"},
       {:jason, "~> 1.1"},
       {:poison, "~> 3.0", override: true},
-      {:captcha, "~> 0.1.0"},
+      {:captcha, github: "zven21/elixir-captcha"},
+      {:turbo_ecto, github: "zven21/turbo_ecto"},
+      {:turbo_html, github: "zven21/turbo_html"},
       {:remote_ip, "~> 0.1.4"},
       {:plug_attack, "~> 0.3.1"},
-      {:sentry, "~> 6.4"}
+      {:sentry, "~> 6.4"},
+      {:ex_machina, "~> 2.2.2"},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 
@@ -78,7 +89,7 @@ defmodule Mipha.Mixfile do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "test": ["ecto.create --quiet", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"]
     ]
   end
 end

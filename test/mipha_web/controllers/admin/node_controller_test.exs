@@ -1,88 +1,66 @@
 defmodule MiphaWeb.Admin.NodeControllerTest do
   use MiphaWeb.ConnCase
 
-  alias Mipha.Topics
+  alias Mipha.Topics.Node
 
-  @create_attrs %{name: "some name", parent_id: 42, position: 42, summary: "some summary"}
-  @update_attrs %{name: "some updated name", parent_id: 43, position: 43, summary: "some updated summary"}
-  @invalid_attrs %{name: nil, parent_id: nil, position: nil, summary: nil}
+  @valid_attrs %{name: "some node"}
+  @invalid_attrs %{name: nil}
 
-  def fixture(:node) do
-    {:ok, node} = Topics.create_node(@create_attrs)
-    node
+  @tag :as_admin
+  test "lists all nodes on index", %{conn: conn} do
+    # n1 = insert(:node)
+    # n2 = insert(:node)
+    conn = get(conn, admin_node_path(conn, :index))
+    assert conn.status == 200
+    # assert conn.resp_body =~ n1.name
+    # assert conn.resp_body =~ n2.name
   end
 
-  describe "index" do
-    test "lists all nodes", %{conn: conn} do
-      conn = get conn, admin_node_path(conn, :index)
-      assert html_response(conn, 200) =~ "Listing Nodes"
-    end
+  @tag :as_admin
+  test "creates node with valid attributes, and redirects", %{conn: conn} do
+    conn = post(conn, admin_node_path(conn, :create), node: @valid_attrs)
+    node = Repo.one(from t in Node, where: t.name == ^@valid_attrs[:name])
+
+    assert redirected_to(conn) == admin_node_path(conn, :show, node.id)
+    assert node.name == @valid_attrs[:name]
   end
 
-  describe "new node" do
-    test "renders form", %{conn: conn} do
-      conn = get conn, admin_node_path(conn, :new)
-      assert html_response(conn, 200) =~ "New Node"
-    end
+  @tag :as_admin
+  test "does not create node with invalid attributes", %{conn: conn} do
+    count_before = count(Node)
+    conn = post(conn, admin_node_path(conn, :create), node: @invalid_attrs)
+
+    assert conn.status == 200
+    assert count(Node) == count_before
   end
 
-  describe "create node" do
-    test "redirects to show when data is valid", %{conn: conn} do
-      conn = post conn, admin_node_path(conn, :create), node: @create_attrs
+  @tag :as_admin
+  test "updates node", %{conn: conn} do
+    n = insert(:node)
+    conn = put(conn, admin_node_path(conn, :update, n.id), node: @valid_attrs)
 
-      assert %{id: id} = redirected_params(conn)
-      assert redirected_to(conn) == admin_node_path(conn, :show, id)
-
-      conn = get conn, admin_node_path(conn, :show, id)
-      assert html_response(conn, 200) =~ "Show Node"
-    end
-
-    test "renders errors when data is invalid", %{conn: conn} do
-      conn = post conn, admin_node_path(conn, :create), node: @invalid_attrs
-      assert html_response(conn, 200) =~ "New Node"
-    end
+    assert redirected_to(conn) == admin_node_path(conn, :show, n.id)
   end
 
-  describe "edit node" do
-    setup [:create_node]
+  # @tag :as_admin
+  # test "renders form to create new node", %{conn: conn} do
+  #   conn = get(conn, admin_node_path(conn, :new))
+  #   assert html_response(conn, 200) =~ ~r/new/
+  # end
 
-    test "renders form for editing chosen node", %{conn: conn, node: node} do
-      conn = get conn, admin_node_path(conn, :edit, node)
-      assert html_response(conn, 200) =~ "Edit Node"
-    end
-  end
+  # @tag :as_admin
+  # test "renders form to create edit node", %{conn: conn} do
+  #   n = insert(:node)
+  #   conn = get(conn, admin_node_path(conn, :edit, n.id))
+  #   assert html_response(conn, 200) =~ ~r/edit/
+  # end
 
-  describe "update node" do
-    setup [:create_node]
+  @tag :as_admin
+  test "deletes node", %{conn: conn} do
+    n = insert(:node)
+    conn = delete(conn, admin_node_path(conn, :delete, n.id))
 
-    test "redirects when data is valid", %{conn: conn, node: node} do
-      conn = put conn, admin_node_path(conn, :update, node), node: @update_attrs
-      assert redirected_to(conn) == admin_node_path(conn, :show, node)
-
-      conn = get conn, admin_node_path(conn, :show, node)
-      assert html_response(conn, 200) =~ "some updated name"
-    end
-
-    test "renders errors when data is invalid", %{conn: conn, node: node} do
-      conn = put conn, admin_node_path(conn, :update, node), node: @invalid_attrs
-      assert html_response(conn, 200) =~ "Edit Node"
-    end
-  end
-
-  describe "delete node" do
-    setup [:create_node]
-
-    test "deletes chosen node", %{conn: conn, node: node} do
-      conn = delete conn, admin_node_path(conn, :delete, node)
-      assert redirected_to(conn) == admin_node_path(conn, :index)
-      assert_error_sent 404, fn ->
-        get conn, admin_node_path(conn, :show, node)
-      end
-    end
-  end
-
-  defp create_node(_) do
-    node = fixture(:node)
-    {:ok, node: node}
+    assert redirected_to(conn) == admin_node_path(conn, :index)
+    # assert count(Node) == 0
   end
 end

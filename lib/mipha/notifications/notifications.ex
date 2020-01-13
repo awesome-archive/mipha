@@ -5,6 +5,7 @@ defmodule Mipha.Notifications do
 
   import Ecto.Query, warn: false
   alias Ecto.Multi
+
   alias Mipha.{
     Repo,
     Topics,
@@ -117,9 +118,10 @@ defmodule Mipha.Notifications do
   @doc """
   标记单个已读
   """
-  @spec read_notification(UserNotification.t()) :: {:ok, UserNotification.t()} | {:error, %Ecto.Changeset{}}
+  @spec read_notification(UserNotification.t()) ::
+          {:ok, UserNotification.t()} | {:error, %Ecto.Changeset{}}
   def read_notification(%UserNotification{} = user_notification) do
-    attrs = %{read_at: Timex.now}
+    attrs = %{read_at: Timex.now()}
 
     user_notification
     |> UserNotification.update_changeset(attrs)
@@ -134,7 +136,7 @@ defmodule Mipha.Notifications do
     user
     |> UserNotification.by_user()
     |> UserNotification.unread()
-    |> Repo.update_all(set: [read_at: Timex.now])
+    |> Repo.update_all(set: [read_at: Timex.now()])
   end
 
   @doc """
@@ -166,7 +168,7 @@ defmodule Mipha.Notifications do
     |> Map.get(:actor)
   end
 
- @doc """
+  @doc """
   获取通知对象 topic || reply || user
 
   ## Examples
@@ -324,16 +326,5 @@ defmodule Mipha.Notifications do
   """
   def change_user_notification(%UserNotification{} = user_notification) do
     UserNotification.changeset(user_notification, %{})
-  end
-
-  # 获取 current_user
-  # 通过 current_user 获取 关联的 user_notifications 按照日期倒叙，已天为单位
-  # 然后获取单条 notitication 信息, 如果是 topic 就展示 topic
-
-  def cond_user_notifications(%User{} = user) do
-    user
-    |> UserNotification.by_user()
-    |> preload([:user, :notification])
-    # |> Enum.group_by(&(Timex.format(&1.updated_at, "{YYYY}-{0M}-{D}")))
   end
 end

@@ -10,19 +10,7 @@ defmodule Mipha.Accounts do
   alias Mipha.Repo
   alias Mipha.Accounts.{User, Team}
   alias Mipha.Utils.Store
-
-  @doc """
-  Returns the list of users.
-
-  ## Examples
-
-      iex> list_users()
-      [%User{}, ...]
-
-  """
-  def list_users do
-    Repo.all(User)
-  end
+  alias Mipha.Follows.Follow
 
   @doc """
   Gets a single user.
@@ -39,6 +27,8 @@ defmodule Mipha.Accounts do
 
   """
   def get_user!(id), do: Repo.get!(User, id)
+
+  def get_user(id), do: Repo.get(User, id)
 
   @doc """
   Creates a user.
@@ -142,7 +132,7 @@ defmodule Mipha.Accounts do
 
     case check_user_password(user, attrs.password) do
       true -> {:ok, user}
-      _    -> {:error, "Failed auth."}
+      _ -> {:error, "Failed auth."}
     end
   end
 
@@ -150,7 +140,7 @@ defmodule Mipha.Accounts do
   Gets a user by given clauses.
   """
   @spec get_user_by(Keyword.t(), Keyword.t()) :: User.t() | nil
-  def get_user_by(clauses, opts \\ []) do
+  def get_user_by(clauses, _opts \\ []) do
     User
     |> preload([:location, :company, :teams])
     |> Repo.get_by(clauses)
@@ -191,7 +181,7 @@ defmodule Mipha.Accounts do
   defp check_user_password(user, password) do
     case user do
       nil -> false
-      _   -> Bcrypt.checkpw(password, user.password_hash)
+      _ -> !is_nil(user.password_hash) && Bcrypt.checkpw(password, user.password_hash)
     end
   end
 
@@ -230,7 +220,8 @@ defmodule Mipha.Accounts do
         |> User.update_password_changeset(attrs)
         |> Repo.update()
 
-      _ -> {:error, "Invalid current password"}
+      _ ->
+        {:error, "Invalid current password"}
     end
   end
 
@@ -238,7 +229,7 @@ defmodule Mipha.Accounts do
   Mark the current user verified
   """
   def mark_as_verified(user) do
-    attrs = %{"email_verified_at" => Timex.now}
+    attrs = %{"email_verified_at" => Timex.now()}
     update_user(user, attrs)
   end
 
@@ -262,7 +253,7 @@ defmodule Mipha.Accounts do
     login_or_register_from_github(%{user | email: nickname <> "@users.noreply.github.com"})
   end
 
-  def login_or_register_from_github(%{nickname: nickname, name: name, email: email}) do
+  def login_or_register_from_github(%{nickname: nickname, name: _name, email: email}) do
     case get_user_by_username(nickname) do
       nil ->
         create_user(%{
@@ -294,14 +285,14 @@ defmodule Mipha.Accounts do
   def github_repositories(%User{} = user) do
     user
     |> github_repos_cache_key
-    |> Store.get!
+    |> Store.get!()
     |> fetch_github_repos(user)
   end
 
   def github_repositories(%Team{} = team) do
     team
     |> github_repos_cache_key
-    |> Store.get!
+    |> Store.get!()
     |> fetch_github_repos(team)
   end
 
@@ -310,12 +301,13 @@ defmodule Mipha.Accounts do
     repos =
       target
       |> github_repos_url
-      |> HTTPoison.get!
+      |> HTTPoison.get!()
       |> handle_response
 
     Store.put!(github_repos_cache_key(target), repos)
     repos
   end
+
   defp fetch_github_repos(items, _) do
     items
   end
@@ -323,11 +315,12 @@ defmodule Mipha.Accounts do
   # 拉取数据，并且 Json 处理
   defp handle_response(%HTTPoison.Response{body: body, status_code: 200}) do
     body
-    |> Jason.decode!
-    |> Enum.map(&(Map.take(&1, ~w(name html_url watchers language description))))
+    |> Jason.decode!()
+    |> Enum.map(&Map.take(&1, ~w(name html_url watchers language description)))
     |> Enum.sort(&(&1["watchers"] >= &2["watchers"]))
     |> Enum.take(10)
   end
+
   defp handle_response(%HTTPoison.Response{body: _, status_code: 404}) do
     []
   end
@@ -339,7 +332,9 @@ defmodule Mipha.Accounts do
 
   # 请求获取 github 用户的 repos 的 Url
   defp github_repos_url(target) do
-    "https://api.github.com/users/#{github_handle(target)}/repos?type=owner&sort=pushed"
+    "https://api.github.com/users/#{github_handle(target)}/repos?type=owner&sort=pushed&client_id=#{
+      System.get_env("GITHUB_CLIENT_ID")
+    }&client_secret=#{System.get_env("GITHUB_CLIENT_SECRET")}"
   end
 
   @doc """
@@ -348,9 +343,53 @@ defmodule Mipha.Accounts do
   def github_handle(%User{} = user) do
     user.github_handle || user.username
   end
+
   def github_handle(%Team{} = team) do
     team.github_handle || team.name
   end
+
+  @doc """
+  添加 帖子与评论内容时，mention user.
+  """
+  @spec search_mention_user(User.t(), String.t()) :: any
+  def search_mention_user(%User{} = user, q) do
+    query =
+      from u in User,
+        join: f in Follow,
+        on: f.user_id == u.id,
+        where: f.follower_id == ^user.id,
+        where: like(u.username, ^"#{q}%")
+
+    query
+    |> Repo.all()
+    |> Enum.uniq()
+  end
+
+  @doc """
+  Returns the user register changeset.
+  """
+  @spec user_register_changeset(Map.t()) :: Ecto.Changeset.t()
+  def user_register_changeset(attrs \\ %{}), do: User.register_changeset(%User{}, attrs)
+
+  @doc """
+  Returns the user login changeset.
+  """
+  @spec user_login_changeset(Map.t()) :: Ecto.Changeset.t()
+  def user_login_changeset(attrs \\ %{}), do: User.login_changeset(%User{}, attrs)
+
+  @doc """
+  Returns the user update_password changeset
+  """
+  @spec user_update_password_changeset(Map.t()) :: Ecto.Changeset.t()
+  def user_update_password_changeset(attrs \\ %{}),
+    do: User.update_password_changeset(%User{}, attrs)
+
+  @doc """
+  Returns the change user reset password.
+  """
+  @spec change_user_reset_password(User.t(), Map.t()) :: Ecto.Changeset.t()
+  def change_user_reset_password(%User{} = user, attrs \\ %{}),
+    do: User.reset_password_changeset(user, attrs)
 
   alias Mipha.Accounts.Location
 
@@ -453,19 +492,6 @@ defmodule Mipha.Accounts do
   end
 
   alias Mipha.Accounts.Company
-
-  @doc """
-  Returns the list of companies.
-
-  ## Examples
-
-      iex> list_companies()
-      [%Company{}, ...]
-
-  """
-  def list_companies do
-    Repo.all(Company)
-  end
 
   @doc """
   Gets a single company.

@@ -2,15 +2,15 @@ defmodule MiphaWeb.Admin.NodeController do
   use MiphaWeb, :controller
 
   alias Mipha.Topics
-  alias Mipha.Topics.Node
+  alias Mipha.Topics.Queries
 
-  def index(conn, _params) do
-    nodes = Topics.list_nodes()
-    render(conn, "index.html", nodes: nodes)
+  def index(conn, params) do
+    result = Queries.list_nodes() |> Turbo.Ecto.turbo(params)
+    render(conn, :index, nodes: result.datas, paginate: result.paginate)
   end
 
   def new(conn, _params) do
-    changeset = Topics.change_node(%Node{})
+    changeset = Topics.change_node()
     render(conn, "new.html", changeset: changeset)
   end
 
@@ -20,6 +20,7 @@ defmodule MiphaWeb.Admin.NodeController do
         conn
         |> put_flash(:info, "Node created successfully.")
         |> redirect(to: admin_node_path(conn, :show, node))
+
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "new.html", changeset: changeset)
     end
@@ -44,6 +45,7 @@ defmodule MiphaWeb.Admin.NodeController do
         conn
         |> put_flash(:info, "Node updated successfully.")
         |> redirect(to: admin_node_path(conn, :show, node))
+
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "edit.html", node: node, changeset: changeset)
     end

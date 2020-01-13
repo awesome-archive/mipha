@@ -1,23 +1,21 @@
 defmodule MiphaWeb.NotificationController do
   use MiphaWeb, :controller
 
-  alias Mipha.{
-    Repo,
-    Notifications
-  }
+  alias Mipha.Notifications
 
   plug MiphaWeb.Plug.RequireUser
 
-  def index(conn, _) do
-    page =
+  def index(conn, params) do
+    result =
       conn
       |> current_user()
-      |> Notifications.cond_user_notifications
-      |> Repo.paginate(conn.params)
+      |> Notifications.Queries.cond_user_notifications()
+      |> Turbo.Ecto.turbo(params)
 
-    render conn, :index,
-      notifications: page.entries,
-      page: page
+    render(conn, :index,
+      notifications: result.datas,
+      paginate: result.paginate
+    )
   end
 
   def make_read(conn, _params) do
@@ -26,7 +24,7 @@ defmodule MiphaWeb.NotificationController do
     |> Notifications.mark_read_notification()
 
     conn
-    |> put_flash(:info, "已全部标记为已读。")
+    |> put_flash(:info, gettext("Marked all notifications readed."))
     |> redirect(to: notification_path(conn, :index))
   end
 
@@ -36,7 +34,7 @@ defmodule MiphaWeb.NotificationController do
     |> Notifications.clean_notification()
 
     conn
-    |> put_flash(:info, "已清空通知。")
+    |> put_flash(:info, gettext("Cleaned notification successfully"))
     |> redirect(to: notification_path(conn, :index))
   end
 end

@@ -85,7 +85,7 @@
         {Credo.Check.Readability.AliasOrder, false},
         {Credo.Check.Readability.FunctionNames},
         {Credo.Check.Readability.LargeNumbers},
-        {Credo.Check.Readability.MaxLineLength, priority: :low, max_length: 200},
+        {Credo.Check.Readability.MaxLineLength, priority: :low, max_length: 180},
         {Credo.Check.Readability.ModuleAttributeNames},
         {Credo.Check.Readability.ModuleDoc},
         {Credo.Check.Readability.ModuleNames},
@@ -104,7 +104,7 @@
         #
         ## Refactoring Opportunities
         #
-        {Credo.Check.Refactor.DoubleBooleanNegation},
+        {Credo.Check.Refactor.DoubleBooleanNegation, false},
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.CyclomaticComplexity},
         {Credo.Check.Refactor.FunctionArity},

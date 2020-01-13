@@ -5,6 +5,7 @@ defmodule Mipha.Topics do
 
   import Ecto.Query, warn: false
   alias Ecto.Multi
+
   alias Mipha.{
     Repo,
     Accounts,
@@ -112,9 +113,13 @@ defmodule Mipha.Topics do
       %Ecto.Changeset{source: %Topic{}}
 
   """
-  def change_topic(%Topic{} = topic) do
-    Topic.changeset(topic, %{})
-  end
+  @spec change_topic(Topic.t()) :: Ecto.Changeset.t()
+  def change_topic(%Topic{} = topic \\ %Topic{}), do: Topic.changeset(topic, %{})
+
+  @doc """
+  Increment topic visit count.
+  """
+  def topic_visit_counter(%Topic{} = topic), do: Topic.counter(topic, :inc, :visit_count)
 
   @doc """
   Inserts a topic.
@@ -141,7 +146,7 @@ defmodule Mipha.Topics do
   end
 
   defp maybe_notify_users_of_new_topic(multi) do
-    insert_notification_fn = fn %{topic: topic} ->
+    insert_notification_fn = fn _repo, %{topic: topic} ->
       # 获取关注话题作者的 follower.
       notified_users = notifiable_users_of_topic(topic)
 
@@ -163,11 +168,11 @@ defmodule Mipha.Topics do
 
   # 通知被 @ 的用户
   def maybe_notify_mention_users_of_new_topic(multi, attrs) do
-    insert_notification_fn = fn %{topic: topic} ->
+    insert_notification_fn = fn _repo, %{topic: topic} ->
       notified_users =
         @username_regex
         |> Regex.scan(attrs["body"])
-        |> Enum.map(fn([_, match]) -> Accounts.get_user_by_username(match) end)
+        |> Enum.map(fn [_, match] -> Accounts.get_user_by_username(match) end)
         |> Enum.filter(&(not is_nil(&1)))
 
       attrs = %{
@@ -198,46 +203,6 @@ defmodule Mipha.Topics do
   end
 
   @doc """
-  Filter the list of topics.
-
-  ## Examples
-
-      iex> cond_topics()
-      Ecto.Query.t()
-
-      iex> cond_topics(type: :educational)
-      Ecto.Query.t()
-
-      iex> cond_topics(node: %Node{})
-      Ecto.Query.t()
-
-      iex> cond_topics(user: %User{})
-      Ecto.Query.t()
-
-  """
-  @spec cond_topics(Keyword.t()) :: Ecto.Query.t() | nil
-  def cond_topics(opts \\ []) do
-    opts
-    |> filter_from_clauses
-    |> Topic.base_order
-    |> preload([:user, :node, :last_reply_user])
-  end
-
-  defp filter_from_clauses(opts) do
-    do_filter_from_clauses(opts)
-  end
-
-  defp do_filter_from_clauses(type: :jobs), do: Topic.job
-  defp do_filter_from_clauses(type: :educational), do: Topic.educational
-  defp do_filter_from_clauses(type: :featured), do: Topic.featured
-  defp do_filter_from_clauses(type: :no_reply), do: Topic.no_reply
-  defp do_filter_from_clauses(type: :popular), do: Topic.popular
-  defp do_filter_from_clauses(node: node), do: Topic.by_node(node)
-  defp do_filter_from_clauses(user: user), do: Topic.by_user(user)
-  defp do_filter_from_clauses(user_ids: user_ids), do: Topic.by_user_ids(user_ids)
-  defp do_filter_from_clauses(_), do: Topic
-
-  @doc """
   Returns the featured of topics.
 
   ## Examples
@@ -247,7 +212,7 @@ defmodule Mipha.Topics do
 
   """
   def list_featured_topics do
-    Topic.featured
+    Topic.featured()
     |> Repo.all()
     |> Repo.preload([:node, :user, :last_reply_user])
   end
@@ -277,9 +242,9 @@ defmodule Mipha.Topics do
   @spec recent_topics(User.t()) :: [Topic.t()] | nil
   def recent_topics(%User{} = user) do
     user
-    |> Topic.by_user
-    |> Topic.recent
-    |> Repo.all
+    |> Topic.by_user()
+    |> Topic.recent()
+    |> Repo.all()
     |> Repo.preload([:node, :user, :last_reply_user])
   end
 
@@ -295,7 +260,7 @@ defmodule Mipha.Topics do
   @spec author(Topic.t()) :: User.t()
   def author(%Topic{} = topic) do
     topic
-    |> Topic.preload_user
+    |> Topic.preload_user()
     |> Map.fetch!(:user)
   end
 
@@ -391,17 +356,16 @@ defmodule Mipha.Topics do
       %Ecto.Changeset{source: %Node{}}
 
   """
-  def change_node(%Node{} = node) do
-    Node.changeset(node, %{})
-  end
+  @spec change_node(Node.t()) :: Ecto.Changeset.t()
+  def change_node(%Node{} = node \\ %Node{}), do: Node.changeset(node, %{})
 
   @doc """
   Returns the parent of nodes
   """
   @spec list_parent_nodes :: [Node.t()] | nil
   def list_parent_nodes do
-    Node.is_parent
-    |> Repo.all
-    |> Node.preload_children
+    Node.is_parent()
+    |> Repo.all()
+    |> Node.preload_children()
   end
 end

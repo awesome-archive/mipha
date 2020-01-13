@@ -46,11 +46,6 @@ defmodule Mipha.AccountsTest do
       user
     end
 
-    test "list_users/0 returns all users" do
-      user = user_fixture()
-      assert Accounts.list_users() == [user]
-    end
-
     test "get_user!/1 returns the user with given id" do
       user = user_fixture()
       assert Accounts.get_user!(user.id) == user
@@ -125,7 +120,7 @@ defmodule Mipha.AccountsTest do
 
     test "get_location!/1 returns the location with given id" do
       location = location_fixture()
-      assert Accounts.get_location!(location.id) == (location |> Repo.preload([:users]))
+      assert Accounts.get_location!(location.id) == location |> Repo.preload([:users])
     end
 
     test "create_location/1 with valid data creates a location" do
@@ -147,7 +142,7 @@ defmodule Mipha.AccountsTest do
     test "update_location/2 with invalid data returns error changeset" do
       location = location_fixture()
       assert {:error, %Ecto.Changeset{}} = Accounts.update_location(location, @invalid_attrs)
-      assert (location |> Repo.preload([:users])) == Accounts.get_location!(location.id)
+      assert location |> Repo.preload([:users]) == Accounts.get_location!(location.id)
     end
 
     test "delete_location/1 deletes the location" do
@@ -176,11 +171,6 @@ defmodule Mipha.AccountsTest do
         |> Accounts.create_company()
 
       company
-    end
-
-    test "list_companies/0 returns all companies" do
-      company = company_fixture()
-      assert Accounts.list_companies() == [company]
     end
 
     test "get_company!/1 returns the company with given id" do
@@ -227,8 +217,20 @@ defmodule Mipha.AccountsTest do
   describe "teams" do
     alias Mipha.Accounts.Team
 
-    @valid_attrs %{avatar: "some avatar", github_handle: "some github_handle", name: "some name", owner_id: 42, summary: "some summary"}
-    @update_attrs %{avatar: "some updated avatar", github_handle: "some updated github_handle", name: "some updated name", owner_id: 43, summary: "some updated summary"}
+    @valid_attrs %{
+      avatar: "some avatar",
+      github_handle: "some github_handle",
+      name: "some name",
+      owner_id: 42,
+      summary: "some summary"
+    }
+    @update_attrs %{
+      avatar: "some updated avatar",
+      github_handle: "some updated github_handle",
+      name: "some updated name",
+      owner_id: 43,
+      summary: "some updated summary"
+    }
     @invalid_attrs %{avatar: nil, github_handle: nil, name: nil, owner_id: nil, summary: nil}
 
     def team_fixture(attrs \\ %{}) do
@@ -247,7 +249,7 @@ defmodule Mipha.AccountsTest do
 
     test "get_team!/1 returns the team with given id" do
       team = team_fixture()
-      assert Accounts.get_team!(team.id) == (team |> Repo.preload([:users, :owner]))
+      assert Accounts.get_team!(team.id) == team |> Repo.preload([:users, :owner])
     end
 
     test "create_team/1 with valid data creates a team" do
@@ -277,7 +279,7 @@ defmodule Mipha.AccountsTest do
     test "update_team/2 with invalid data returns error changeset" do
       team = team_fixture()
       assert {:error, %Ecto.Changeset{}} = Accounts.update_team(team, @invalid_attrs)
-      assert (team |> Repo.preload([:users, :owner])) == Accounts.get_team!(team.id)
+      assert team |> Repo.preload([:users, :owner]) == Accounts.get_team!(team.id)
     end
 
     test "delete_team/1 deletes the team" do

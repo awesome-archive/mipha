@@ -7,15 +7,7 @@ defmodule MiphaWeb.SettingView do
   location select option
   """
   def location_option do
-    Accounts.list_locations
-    |> Enum.map(&{&1.name, &1.id})
-  end
-
-  @doc """
-  company select option
-  """
-  def company_option do
-    Accounts.list_companies
+    Accounts.list_locations()
     |> Enum.map(&{&1.name, &1.id})
   end
 end

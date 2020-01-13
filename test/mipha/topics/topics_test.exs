@@ -62,19 +62,27 @@ defmodule Mipha.TopicsTest do
 
     test "get_topic!/1 returns the topic with given id" do
       topic = topic_fixture()
-      assert Topics.get_topic!(topic.id) == (topic |> Repo.preload([:node, :user, :last_reply_user, [replies: [:user, [parent: :user]]]]))
+
+      assert Topics.get_topic!(topic.id) ==
+               topic
+               |> Repo.preload([
+                 :node,
+                 :user,
+                 :last_reply_user,
+                 [replies: [:user, [parent: :user]]]
+               ])
     end
 
     test "create_topic/1 with valid data creates a topic" do
       assert {:ok, %Topic{} = topic} = Topics.create_topic(@valid_attrs)
       assert topic.body == "some body"
-      assert topic.closed_at == ~N[2010-04-17 14:00:00.000000]
+      assert topic.closed_at == ~N[2010-04-17 14:00:00]
       assert topic.last_reply_id == 42
       assert topic.last_reply_user_id == 42
       assert topic.node_id == 42
-      assert topic.replied_at == ~N[2010-04-17 14:00:00.000000]
+      assert topic.replied_at == ~N[2010-04-17 14:00:00]
       assert topic.reply_count == 42
-      assert topic.suggested_at == ~N[2010-04-17 14:00:00.000000]
+      assert topic.suggested_at == ~N[2010-04-17 14:00:00]
       assert topic.title == "some title"
       assert topic.user_id == 42
       assert topic.visit_count == 42
@@ -89,13 +97,13 @@ defmodule Mipha.TopicsTest do
       assert {:ok, topic} = Topics.update_topic(topic, @update_attrs)
       assert %Topic{} = topic
       assert topic.body == "some updated body"
-      assert topic.closed_at == ~N[2011-05-18 15:01:01.000000]
+      assert topic.closed_at == ~N[2011-05-18 15:01:01]
       assert topic.last_reply_id == 43
       assert topic.last_reply_user_id == 43
       assert topic.node_id == 43
-      assert topic.replied_at == ~N[2011-05-18 15:01:01.000000]
+      assert topic.replied_at == ~N[2011-05-18 15:01:01]
       assert topic.reply_count == 43
-      assert topic.suggested_at == ~N[2011-05-18 15:01:01.000000]
+      assert topic.suggested_at == ~N[2011-05-18 15:01:01]
       assert topic.title == "some updated title"
       assert topic.user_id == 43
       assert topic.visit_count == 43
@@ -104,7 +112,10 @@ defmodule Mipha.TopicsTest do
     test "update_topic/2 with invalid data returns error changeset" do
       topic = topic_fixture()
       assert {:error, %Ecto.Changeset{}} = Topics.update_topic(topic, @invalid_attrs)
-      assert (topic |> Repo.preload([:node, :user, :last_reply_user, [replies: [:user, [parent: :user]]]])) == Topics.get_topic!(topic.id)
+
+      assert topic
+             |> Repo.preload([:node, :user, :last_reply_user, [replies: [:user, [parent: :user]]]]) ==
+               Topics.get_topic!(topic.id)
     end
 
     test "delete_topic/1 deletes the topic" do
@@ -123,7 +134,12 @@ defmodule Mipha.TopicsTest do
     alias Mipha.Topics.Node
 
     @valid_attrs %{name: "some name", parent_id: 42, position: 42, summary: "some summary"}
-    @update_attrs %{name: "some updated name", parent_id: 43, position: 43, summary: "some updated summary"}
+    @update_attrs %{
+      name: "some updated name",
+      parent_id: 43,
+      position: 43,
+      summary: "some updated summary"
+    }
     @invalid_attrs %{name: nil, parent_id: nil, position: nil, summary: nil}
 
     def node_fixture(attrs \\ %{}) do
@@ -133,11 +149,6 @@ defmodule Mipha.TopicsTest do
         |> Topics.create_node()
 
       node
-    end
-
-    test "list_nodes/0 returns all nodes" do
-      node = node_fixture()
-      assert Topics.list_nodes() == [node]
     end
 
     test "get_node!/1 returns the node with given id" do

@@ -11,16 +11,23 @@ defmodule MiphaWeb.Session do
   def current_user(conn) do
     case get_current_user(conn) do
       nil -> nil
-      id  -> Accounts.get_user!(id)
+      id -> Accounts.get_user(id)
     end
   end
 
   def user_logged_in?(conn), do: current_user(conn)
 
+  def user_token(conn) do
+    case get_current_user(conn) do
+      nil -> nil
+      id -> Phoenix.Token.sign(conn, "user socket", id)
+    end
+  end
+
   def admin?(conn) do
     case current_user(conn) do
       nil -> false
-      u   -> u.is_admin
+      u -> u.is_admin
     end
   end
 
@@ -28,7 +35,7 @@ defmodule MiphaWeb.Session do
     if get_session_from_cookies() do
       case conn.cookies["current_user"] do
         nil -> Conn.get_session(conn, :current_user)
-        u   -> u
+        u -> u
       end
     else
       Conn.get_session(conn, :current_user)
@@ -36,6 +43,6 @@ defmodule MiphaWeb.Session do
   end
 
   defp get_session_from_cookies do
-    Application.get_env(:mipha_web, :get_session_from_cookies) || false
+    Application.get_env(:mipha_web, :get_session_from_cookies, false)
   end
 end

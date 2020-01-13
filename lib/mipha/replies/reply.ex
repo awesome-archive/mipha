@@ -14,8 +14,9 @@ defmodule Mipha.Replies.Reply do
 
   @type t :: %Reply{}
 
-  schema "repies" do
+  schema "replies" do
     field :content, :string
+    field :star_count, :integer, default: 0
 
     belongs_to :user, User
     belongs_to :topic, Topic
@@ -27,7 +28,7 @@ defmodule Mipha.Replies.Reply do
     timestamps()
   end
 
-    @doc """
+  @doc """
   Returns the children node.
   """
   @spec is_child(Ecto.Queryable.t()) :: Ecto.Query.t()
@@ -83,6 +84,7 @@ defmodule Mipha.Replies.Reply do
   @doc false
   def changeset(reply, attrs) do
     permitted_attrs = ~w(
+      star_count
       topic_id
       user_id
       parent_id

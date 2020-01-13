@@ -5,6 +5,7 @@ defmodule Mipha.Stars do
 
   import Ecto.Query, warn: false
   alias Ecto.Multi
+
   alias Mipha.{
     Repo,
     Stars,
@@ -105,10 +106,35 @@ defmodule Mipha.Stars do
 
   @spec delete_star(Keyword.t()) :: {:ok, Star.t()} | nil
   def delete_star(clauses) do
-    clauses
-    |> get_star
-    |> Repo.delete
+    Multi.new()
+    |> Multi.delete(:star, get_star(clauses))
+    |> decrease_related_count(clauses)
+    |> Repo.transaction()
   end
+
+  # unstar, decrease topic star_count
+  defp decrease_related_count(multi, user_id: _, topic_id: topic_id) when topic_id != "" do
+    update_topic_fn = fn _repo, %{star: star} ->
+      topic = starrable(star)
+      attrs = %{star_count: topic.star_count - 1}
+      Topics.update_topic(topic, attrs)
+    end
+
+    Multi.run(multi, :decrease_related_count, update_topic_fn)
+  end
+
+  # unstar, decrease reply star_count
+  defp decrease_related_count(multi, user_id: _, reply_id: reply_id) when reply_id != "" do
+    update_reply_fn = fn _repo, %{star: star} ->
+      reply = starrable(star)
+      attrs = %{star_count: reply.star_count - 1}
+      Replies.update_reply(reply, attrs)
+    end
+
+    Multi.run(multi, :decrease_related_count, update_reply_fn)
+  end
+
+  defp decrease_related_count(multi, _), do: multi
 
   @doc """
   Returns an `%Ecto.Changeset{}` for tracking star changes.
@@ -172,12 +198,37 @@ defmodule Mipha.Stars do
 
     Multi.new()
     |> Multi.insert(:star, start_changeset)
+    |> increase_related_count(attrs)
     |> notify_author_of_starrable()
     |> Repo.transaction()
   end
 
+  # star, increase topic star_count
+  defp increase_related_count(multi, %{topic_id: topic_id}) when topic_id != "" do
+    update_topic_fn = fn _repo, %{star: star} ->
+      topic = starrable(star)
+      attrs = %{star_count: topic.star_count + 1}
+      Topics.update_topic(topic, attrs)
+    end
+
+    Multi.run(multi, :increase_related_count, update_topic_fn)
+  end
+
+  # star, increase reply star_count
+  defp increase_related_count(multi, %{reply_id: reply_id}) when reply_id != "" do
+    update_reply_fn = fn %{star: star} ->
+      reply = starrable(star)
+      attrs = %{star_count: reply.star_count + 1}
+      Replies.update_reply(reply, attrs)
+    end
+
+    Multi.run(multi, :increase_related_count, update_reply_fn)
+  end
+
+  defp increase_related_count(multi, _), do: multi
+
   defp notify_author_of_starrable(multi) do
-    insert_notification_fn = fn %{star: star} ->
+    insert_notification_fn = fn _repo, %{star: star} ->
       starrable = starrable(star)
 
       author =
@@ -244,7 +295,7 @@ defmodule Mipha.Stars do
       end
       |> Keyword.put(:user_id, user_id)
 
-    get_star(clauses)
+    !!get_star(clauses)
   end
 
   @spec get_starrable_from_clauses(Keyword.t()) :: starrable()
@@ -254,19 +305,5 @@ defmodule Mipha.Stars do
       Keyword.has_key?(clauses, :reply) -> Keyword.get(clauses, :reply)
       true -> Star
     end
-  end
-
-  @doc """
-  Return starrable count.
-  """
-  @spec get_starred_count(Keyword.t()) :: non_neg_integer()
-  def get_starred_count(clauses) do
-    clauses
-    |> get_starrable_from_clauses()
-    |> case do
-      %Topic{} = topic -> Star.by_topic(topic)
-      %Reply{} = reply -> Star.by_reply(reply)
-    end
-    |> Repo.aggregate(:count, :id)
   end
 end
